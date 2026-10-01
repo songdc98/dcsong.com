@@ -1,0 +1,45 @@
+name: Publish website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Read the current website source
+        uses: actions/checkout@v6
+        with:
+          repository: songdc98/songdc98.github.io
+          ref: main
+          path: site
+          persist-credentials: false
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Record the published source revision
+        run: |
+          revision=$(git -C site rev-parse HEAD)
+          printf '{"source":"songdc98/songdc98.github.io","revision":"%s"}\n' "$revision" > site/deployment.json
+      - name: Upload the website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Publish at dcsong.com
+        id: deployment
+        uses: actions/deploy-pages@v4
